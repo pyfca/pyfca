@@ -3,8 +3,8 @@ from functools import reduce
 
 def istr(i,b,w,c="0123456789abcdefghijklmnopqrstuvwxyz"):
     return ((w<=0 and i==0) and " ") or (istr(i//b, b, w-1, c).lstrip() + c[i%b])
-digitat2 = lambda i,a: (i>>a)&1
 digitat = lambda i,a,b: int(istr(i,b,a+1)[-a],b)
+digitat2 = lambda i,a: (i>>a)&1
 #concatenate...
 horizontally = lambda K1,K2,b,w1,w2: [int(s,b) for s in [istr(k1,b,w1)+istr(k2,b,w2) for k1,k2 in zip(K1,K2)]]
 horizontally2 = lambda K1,K2,w1,w2: [(k1<<w2)|k2 for k1,k2 in zip(K1,K2)]
@@ -43,16 +43,17 @@ def H(g,i):
         else:
             return int('101',2)
 
-def UV_K(Hg,gw):
+def UV_H(Hg,gw):
     """
+    Constructs implications and intents based on H
     gw = g width
     Hg = H(g), g is the binary coding of the attribute set
     UV = all non-trivial (!V⊂U) implications U->V with UuV closed; in ternary coding (1=V,2=U)
     K = all closed sets
     """
     lefts = set()
-    K = set()
-    UV = set()
+    K = []
+    UV = []
     p = Hwidth(gw)
     pp = 2**p
     while p:
@@ -61,12 +62,12 @@ def UV_K(Hg,gw):
         if Hg&pp:
             y = istr(p,3,gw)
             yy = y.replace('1','0')
-            is02 = y.find('1') == -1 #y∈{0,2}^n
-            if is02:
-                K.add(y)
-            elif yy not in lefts:
-                lefts.add(yy)
-                UV.add(y)
+            if yy not in lefts: 
+                if y.find('1') == -1:#y∈{0,2}^n
+                    K.append(y)
+                else:
+                    UV.append(y)
+                    lefts.add(yy)
     return (UV,K)
 
 Awidth = lambda n: 2**n
@@ -79,12 +80,12 @@ def A(g,i):
         if g1:
             return An<<n | An
         else:
-            return An<<n | int('1'*n,2)
+            return int('1'*n,2)<<n | An
     else:
         if g1:
             return int('00',2)
         else:
-            return int('01',2)
+            return int('10',2)
 Bwidth = lambda n:n*2**(n-1)
 def B(g,i):
     """recursively constructs B line for g; i = len(g)-1"""
@@ -95,14 +96,70 @@ def B(g,i):
         i=i-1
         Bn = B(g,i)
         if g1:
-            return Bn<<(nA+nB) | int('1',nA)<<nB | Bn
+            return Bn            << (nA+nB) | int('1'*nA,2) << nB | Bn
         else:
-            return Bn<<(nA+nB) | A(g,i)<<nB      | int('1'*nB,2)
+            return int('1'*nB,2) << (nA+nB) | A(g,i)      << nB | Bn
     else:
         if g1:
             return 1
         else:
             return 0
+
+def Aimp(t,i):
+    if i<0:
+        return ""
+    nA = Awidth(i)
+    if t < nA:
+        return "0"+Aimp(t,i-1)
+    else:
+        return "2"+Aimp(t-nA,i-1)
+def Bimp(t,i):
+    """
+    Constructs ternary implication coding (0=not there, 2=U, 1=V)
+    t is B column position
+    i = |M|-1 to 0
+    """
+    if not i:
+        return "1"
+    nA = Awidth(i)
+    nB = Bwidth(i)
+    nBB = nB + nA
+    if t < nB:
+        return "0"+Bimp(t,i-1)
+    elif t < nBB:
+        return "1"+Aimp(t-nB,i-1)
+    else:
+        return "2"+Bimp(t-nBB,i-1)
+
+def UV_B(Bg,gw):
+    """
+    """
+    UV = []
+    p = Bwidth(gw)
+    pp = 2**p
+    while p:
+        pp = pp>>1
+        p = p-1
+        if Bg&pp:
+            uv = Bimp(p,gw-1)
+            UV.append(uv)
+    return UV
+
+def respects(g,imp):
+    """
+    g is an int, where each bit is an attribute
+    implication UV is ternary coded 1 = ∈V, 2 = ∈V, 0 otherwise
+    g and UV have the same number of digits
+    """
+    if isinstance(g,str):
+        g = int(g,2)
+    if isinstance(imp,int):
+        imp = istr(imp,3,g.bit_length())
+    V = int(imp.replace('1','2').replace('2','1'),2)
+    U = int(imp.replace('1','0').replace('2','1'),2)
+    ginU = U&g == U
+    ginV = V&g == V
+    return not ginU or ginV
 
 class Context(list):
     def __init__(self, *args, **kwargs):
@@ -145,16 +202,29 @@ class Context(list):
         return rs
     def size(self):
         return self.width, len(self)
-    def UV_K(self):
+    def UV_H(self):
         """
         UV = all non-trivial (!V⊂U) implications U->V with UuV closed; in ternary coding (1=V,2=U)
         K = all closed sets
 
-        This is UV_K function, but the returned implications are respected by all attribute sets of this context.
+        This is UV_H function, but the returned implications are respected by all attribute sets of this context.
         This corresponds to a multiplication or & operation of the Hg sets.
         """
         h = reduce(lambda x,y:x&y,(H(g,self.width-1) for g in self))
-        return UV_K(h, self.width)
+        return UV_H(h, self.width)
+    def UV_B(self):
+        """
+        returns UV = all respected U->Ux in ternary coding (1=V,2=U)
+        """
+        h = reduce(lambda x,y:x&y,(B(g,self.width-1) for g in self))
+        return UV_B(h, self.width)
+    def respects(self, implications):
+        for g in self:
+            for i in implications:
+                if not respects(g,i):
+                    return False
+        return True
+
 
 C = Context
     
@@ -193,7 +263,7 @@ def AA(n):
         return r1 + r2
 def BB(n):
     """constructs the BB context"""
-    if (n<=1):return Context('1\n0')
+    if (n<=1):return Context('0\n1')
     else:
         BB1=BB(n-1)
         AA1=AA(n-1)
