@@ -1,5 +1,7 @@
 from math import trunc, log2
 from functools import reduce
+from itertools import tee
+from collections import defaultdict
 
 def istr(i,b,w,c="0123456789abcdefghijklmnopqrstuvwxyz"):
     return ((w<=0 and i==0) and " ") or (istr(i//b, b, w-1, c).lstrip() + c[i%b])
@@ -105,15 +107,15 @@ def B(g,i):
         else:
             return 0
 
-def Aimp(t,i):
+def A012(t,i):
     if i<0:
         return ""
     nA = Awidth(i)
     if t < nA:
-        return "0"+Aimp(t,i-1)
+        return "0"+A012(t,i-1)
     else:
-        return "2"+Aimp(t-nA,i-1)
-def Bimp(t,i):
+        return "2"+A012(t-nA,i-1)
+def B012(t,i):
     """
     Constructs ternary implication coding (0=not there, 2=U, 1=V)
     t is B column position
@@ -125,14 +127,17 @@ def Bimp(t,i):
     nB = Bwidth(i)
     nBB = nB + nA
     if t < nB:
-        return "0"+Bimp(t,i-1)
+        return "0"+B012(t,i-1)
     elif t < nBB:
-        return "1"+Aimp(t-nB,i-1)
+        return "1"+A012(t-nB,i-1)
     else:
-        return "2"+Bimp(t-nBB,i-1)
+        return "2"+B012(t-nBB,i-1)
 
 def UV_B(Bg,gw):
     """
+    returns the implications UV based on B
+    Bg = B(g), g∈2^M
+    gw = |M|, M is the set of all attributes
     """
     UV = []
     p = Bwidth(gw)
@@ -141,14 +146,190 @@ def UV_B(Bg,gw):
         pp = pp>>1
         p = p-1
         if Bg&pp:
-            uv = Bimp(p,gw-1)
+            uv = B012(p,gw-1)
             UV.append(uv)
     return UV
+
+class v_Us_dict(defaultdict):
+    """
+    In an implication U→u, u is the significant component.
+    U is coded as int.
+    u is the bit column of the implication's conclusion.
+    {u:[U1,U2,...]}
+    """
+    def __init__(self,Bg,gw):
+        """
+        returns the implications {v:Us} based on B
+        v is the significant component
+        Bg = B(g), g∈2^M
+        gw = |M|, M is the set of all attributes
+        """
+        self.width = gw
+        if isinstance(Bg,int):
+            defaultdict.__init__(self,list)
+            p = Bwidth(gw)
+            pp = 2**p
+            while p:
+                pp = pp>>1
+                p = p-1
+                if Bg&pp:
+                    uv = B012(p,gw-1)
+                    #UV.append(uv), but no, lets find minima regarding product order
+                    #{v:[Umin1,Umin2,...]}
+                    #uv = "2012"
+                    v = uv.find('1')#v=significant
+                    u = uv[:v]+'0'+uv[v+1:]
+                    u = int(u.replace('2','1'),2)
+                    Umin_s = self[gw-v-1]#bit position from right
+                    try:
+                        i = next((i for i,U in enumerate(Umin_s) if U&u==u))
+                        Umin_s[i] = u
+                    except StopIteration:
+                        Umin_s.append(u)
+        elif isinstance(Bg,list):
+            defaultdict.__init__(self,list)
+            for k,v in Bg:
+                assert isinstance(v,list)
+                self[k] += v
+        else:
+            defaultdict.__init__(self,list,Bg)
+    def __add__(self, other):
+        res = v_Us_dict([],self.width)
+        if isinstance(other,tuple):
+            other = {other[0]:[other[1]]}
+        keys = set(self)|set(other)
+        for v in keys:
+            t = set()
+            if v in self:
+                t |= set(self[v])
+            if v in other:
+                t |= set(other[v])
+            if t: 
+                res[v] = list(t)
+        return res
+    def __sub__(self, other):
+        res = v_Us_dict([],self.width)
+        for v,U in self.items():
+            res[v] = list(set(U) - set(other[v]))
+        return res
+    def __eq__(self, other):
+        if len(self) != len(other):
+            return False
+        for v,U in self.items():
+            if v not in other:
+                return False
+            Uo = other[v]
+            if not set(Uo)==set(U):
+                return False
+        return True
+    def __mul__(self, other):
+        """
+        This is the o operation in [1]_, that represents the 3rd Armstrong rule.
+        It returns combinations for i‡j: (i,u1|u2) or (j,u1|u2),
+        """
+        res = v_Us_dict([],self.width)
+        if id(self)==id(other):
+            s = iter(self.items())
+            try:
+                while True:
+                    v1, us1 = next(s)
+                    vv1 = 2**v1
+                    s, ss = tee(s)
+                    try:
+                        while True:
+                            v2, us2 = next(ss)
+                            vv2 = 2**v2
+                            for u1 in us1:
+                                for u2 in us2:
+                                    if vv2&u1 and not vv1&u2:
+                                        res[v1].append((u1|u2)&~vv2)
+                                    elif vv1&u2 and not vv2&u1:
+                                        res[v2].append((u1|u2)&~vv1)
+                    except StopIteration:
+                        pass
+            except StopIteration:
+                pass
+        else:
+            for v1,us1 in self.items():
+                vv1 = 2**v1
+                for v2,us2 in other.items():
+                    vv2 = 2**v2
+                    if v1 != v2:
+                        for u1 in us1:
+                            for u2 in us2:
+                                if vv2&u1 and not vv1&u2:
+                                    res[v1].append((u1|u2)&~vv2)
+                                elif vv1&u2 and not vv2&u1:
+                                    res[v2].append((u1|u2)&~vv1)
+        for v,U in res.items():
+            res[v] = list(set(U))
+        return res
+    def generated(self):
+        """
+        U->v generated from L=∪ min L_i via the 3rd Armstrong rule
+        Note, that this can become bigger than L.
+        """
+        Y = self
+        Yn = Y*Y
+        Ys = Yn
+        while True:
+            Yg = Yn*(Yn+Y)
+            #YgenNotInL = Yg - L
+            #YgenInL = Yg - YgenNotInL
+            #Yn1 = Yn + YgenInL
+            Yn1 = Yn + Yg
+            if Yn1 == Yn:
+                break
+            Yn = Yn1
+            Ys = Ys + Yn
+        return Ys
+    def bar(self):
+        """
+        This is Y ∪ Ygen
+        Note, that this can become bigger than L.
+        """
+        return self + self.generated()
+    def Code012(self):
+        for v,Us in self.items():
+            vleft = self.width - v - 1
+            for u in Us:
+                b = bin(u)[2:] 
+                w0 = self.width-len(b)
+                c01 = '0'*w0+b
+                c01 = c01.replace('1','2')
+                c01 = c01[:vleft]+'1'+c01[vleft+1:]
+                yield c01
+    def __str__(self):
+        return defaultdict.__str__(self).replace('defaultdict','v_Us_dict')
+    def __len__(self):
+        return sum((len(x) for x in self.values()))
+    def flatten(self):
+        for v,Us in self.items():
+            for u in Us:
+                yield (v,u)
+    def stem(self):
+        """
+        This needs to be L = contextg.v_Us_B()
+        """
+        L = self
+        Y = L - (L*L)
+        while True:
+            Ybar = Y.bar()
+            take = L - Ybar
+            if not len(take):
+                return Y
+            else:
+                #take = Y.generated()
+                it = take.flatten()
+                z = next(it)
+                Z=Y+z
+                Y = (Y - Z.generated()) + z #Yn+1
+
 
 def respects(g,imp):
     """
     g is an int, where each bit is an attribute
-    implication UV is ternary coded 1 = ∈V, 2 = ∈V, 0 otherwise
+    implication UV is ternary coded 1 = ∈V, 2 = ∈U, 0 otherwise
     g and UV have the same number of digits
     """
     if isinstance(g,str):
@@ -218,7 +399,16 @@ class Context(list):
         """
         h = reduce(lambda x,y:x&y,(B(g,self.width-1) for g in self))
         return UV_B(h, self.width)
+    def v_Us_B(self):
+        """
+        returns the implications {v:Us} based on B
+        This is L=∪ min L_i in [1]_
+        """
+        h = reduce(lambda x,y:x&y,(B(g,self.width-1) for g in self))
+        return v_Us_dict(h, self.width)
     def respects(self, implications):
+        if isinstance(implications,v_Us_dict):
+            implications = implications.Code012()
         for g in self:
             for i in implications:
                 if not respects(g,i):

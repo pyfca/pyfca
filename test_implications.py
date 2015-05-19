@@ -159,7 +159,7 @@ def test_B_BB():
     assert c == BB(3)
 
 def test_B_imp():
-    imps = [Bimp(i,2) for i in range(Bwidth(3))]
+    imps = [B012(i,2) for i in range(Bwidth(3))]
     assert imps == ['001', '010', '012', '021', '100', '102', '120', '122', '201', '210', '212', '221']
 
 def test_UV_B():
@@ -169,7 +169,7 @@ def test_UV_B():
         gw = len(gs)
         g = int(gs,2)
         Bg = B(g,gw-1)
-        o = [Bimp(p,gw-1) for p in range(Bwidth(gw),-1,-1) if digitat2(Bg,p)>0]
+        o = [B012(p,gw-1) for p in range(Bwidth(gw),-1,-1) if digitat2(Bg,p)>0]
         a = UV_B(Bg,gw)
         assert o == a
 
@@ -194,5 +194,78 @@ def test_context_UV_B():
     uv_b = c.UV_B()
     assert uv_b == ['2221', '2212', '2210', '2201', '2122', '1222', '1220', '1022', '1020', '0221', '0201', '0122']
     assert c.respects(uv_b)
+
+
+def test_v_Us_B():
+    gs = '001'
+    g = int(gs, 2)
+    i = len(gs)-1
+    Bg = B(g, i)
+    w = Bwidth(i+1)
+    s = istr(Bg, 2, w)
+    gw = i+1
+    v_us = v_Us_dict(Bg, gw)
+    #v_Us_dict(<class 'list'>, {0: [0, 2], 1: [4], 2: [2]})
+    vus = list(v_us.Code012())
+    assert vus == ['001', '021', '210', '120']
+    assert all(respects(gs,uv) for uv in vus)
+
+def test_context_v_Us_B():
+    c = Context('''
+                0101
+                1010
+                1001
+                ''')
+    v_us = c.v_Us_B()
+    vus = list(v_us.Code012())
+    assert vus == ['0201', '0221', '2210', '0122', '1020', '1022']
+    assert c.respects(v_us)
+
+def test_v_Us_B_dict():
+    c = Context('''
+                0101
+                1010
+                1001
+                ''')
+    L = c.v_Us_B()
+    #v_Us_dict(<class 'list'>, {0: [4, 6], 1: [12], 2: [3], 3: [2, 3]})
+    assert c.respects(L)
+    L2 = L*L
+    #v_Us_dict(<class 'list'>, {0: [12], 3: [6]})
+    assert list(L2.Code012()) == ['2201', '1220']
+    Y = L - L2
+    Y2 = Y*Y
+    #v_Us_dict(<class 'list'>, {0: [12], 3: [6]})
+    yn1 = lambda yn, y: yn + yn*(yn+y)
+    Y3 = yn1(Y2,Y)
+    Y4 = yn1(Y3,Y)
+    assert Y3 == Y4
+
+def test_Ygenerated():
+    c = Context('''
+                0101
+                1010
+                1001
+                ''')
+    L = c.v_Us_B()
+    Lc = list(L.Code012())
+    assert Lc == ['0201', '0221', '2210', '0122', '1020', '1022']
+    L2 = L*L
+    Y = L - L2
+    Yg = Y.generated()
+    Ygc = list(Yg.Code012())
+    assert Ygc == ['2201', '0221', '1022', '1220']
+
+def test_stem():
+    c = Context('''
+                0101
+                1010
+                1001
+                ''')
+    L = c.v_Us_B()
+    Ls = L.stem()
+    Lsc = list(Ls.Code012())
+    assert Lsc == ['0201', '0221', '2210', '0122', '1020', '1022']
+
 
 
