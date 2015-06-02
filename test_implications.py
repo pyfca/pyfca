@@ -204,10 +204,9 @@ def test_v_Us_B():
     w = Bwidth(i+1)
     s = istr(Bg, 2, w)
     gw = i+1
-    v_us = v_Us_dict(Bg, gw)
-    #v_Us_dict(<class 'list'>, {0: [0, 2], 1: [4], 2: [2]})
+    v_us = v_Us_dict(Bg, gw)#v_Us_dict(<class 'list'>, {0: [0], 1: [4], 2: [2]})
     vus = list(v_us.Code012())
-    assert vus == ['001', '021', '210', '120']
+    assert vus == ['001', '210', '120']
     assert all(respects(gs,uv) for uv in vus)
 
 def test_context_v_Us_B():
@@ -218,7 +217,7 @@ def test_context_v_Us_B():
                 ''')
     v_us = c.v_Us_B()
     vus = list(v_us.Code012())
-    assert vus == ['0201', '0221', '2210', '0122', '1020', '1022']
+    assert vus == ['0201', '2210', '0122', '1020']
     assert c.respects(v_us)
 
 def test_v_Us_B_dict():
@@ -227,15 +226,13 @@ def test_v_Us_B_dict():
                 1010
                 1001
                 ''')
-    L = c.v_Us_B()
-    #v_Us_dict(<class 'list'>, {0: [4, 6], 1: [12], 2: [3], 3: [2, 3]})
+    L = c.v_Us_B() #v_Us_dict(<class 'list'>, {0: [4], 1: [12], 2: [3], 3: [2]})
     assert c.respects(L)
     L2 = L*L
-    #v_Us_dict(<class 'list'>, {0: [12], 3: [6]})
-    assert list(L2.Code012()) == ['2201', '1220']
+    c012 = list(L2.Code012())
+    assert c012 == []
     Y = L - L2
     Y2 = Y*Y
-    #v_Us_dict(<class 'list'>, {0: [12], 3: [6]})
     yn1 = lambda yn, y: yn + yn*(yn+y)
     Y3 = yn1(Y2,Y)
     Y4 = yn1(Y3,Y)
@@ -249,12 +246,14 @@ def test_Ygenerated():
                 ''')
     L = c.v_Us_B()
     Lc = list(L.Code012())
-    assert Lc == ['0201', '0221', '2210', '0122', '1020', '1022']
+    assert Lc == ['0201', '2210', '0122', '1020']
+    assert c.respects(Lc)
     L2 = L*L
     Y = L - L2
     Yg = Y.generated()
     Ygc = list(Yg.Code012())
-    assert Ygc == ['2201', '0221', '1022', '1220']
+    assert Ygc == []
+    assert c.respects(Yg)
 
 def test_stem():
     c = Context('''
@@ -265,7 +264,28 @@ def test_stem():
     L = c.v_Us_B()
     Ls = L.stem()
     Lsc = list(Ls.Code012())
-    assert Lsc == ['0201', '0221', '2210', '0122', '1020', '1022']
+    assert Lsc == ['0201', '2210', '0122', '1020']
+    assert c.respects(L)
+    assert c.respects(Ls)
+    assert c.respects(Lsc)
+    assert not c.respects(Lsc+['2111'])
 
-
+def test_mapping():
+    c = Context('''
+                0101
+                1010
+                1001
+                ''', mapping = '4321')
+    intOrCode012 = c[0]
+    lst = list(c(intOrCode012))
+    assert lst == ['3','1']
+    intOrCode012 = '0101'
+    lst = list(c(intOrCode012))
+    assert lst == ['3','1']
+    L = c.v_Us_B()
+    Ls = L.stem()
+    Lsc = list(Ls.Code012())
+    assert Lsc == ['0201', '2210', '0122', '1020']
+    mapped = [c(i) for i in Lsc]
+    assert mapped == [(['3'], ['1']), (['4', '3'], ['2']), (['2', '1'], ['3']), (['2'], ['4'])]
 
