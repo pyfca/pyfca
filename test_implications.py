@@ -1,3 +1,4 @@
+#py.test test_implications
 from pyfca.implications import *
 import random
 
@@ -250,7 +251,7 @@ def test_Ygenerated():
     assert c.respects(Lc)
     L2 = L*L
     Y = L - L2
-    Yg = Y.generated()
+    Yg = ~Y
     Ygc = list(Yg.Code012())
     assert Ygc == []
     assert c.respects(Yg)
@@ -288,4 +289,22 @@ def test_mapping():
     assert Lsc == ['0201', '2210', '0122', '1020']
     mapped = [c(i) for i in Lsc]
     assert mapped == [(['3'], ['1']), (['4', '3'], ['2']), (['2', '1'], ['3']), (['2'], ['4'])]
+
+ 
+def test_stem():
+    #Asets=[set([4,6,7]),set([2,3,6]),set([1,4,7]),set([2,5,6])]
+    c = Context('''
+            0001011
+            0110010
+            1001001
+            0100110
+            ''',mapping = '1234567')
+    L = c.v_Us_B()
+    Ls = L.stem()
+    c012 = list(Ls.Code012())
+    assert c012 == ['0002001', '2000001', '0020201', '0200010', '2000120', '0001002', '2210000', '0120000', '0100200', '1200002']
+    s = lambda x:''.join(x[0])+'->'+''.join(x[1])
+    mapped = ','.join([s(list(c(i))) for i in c012])
+    assert mapped == "4->7,1->7,35->7,2->6,16->5,7->4,12->3,3->2,5->2,27->1"
+
 

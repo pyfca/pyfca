@@ -174,7 +174,7 @@ class v_Us_dict(defaultdict):
                 p = p-1
                 if Bg&pp:
                     uv = B012(p,gw-1)
-                    #UV.append(uv), but no, lets find minima regarding product order
+                    #let's find minima regarding product order
                     #{v:[Umin1,Umin2,...]}
                     #uv = "2012"
                     #self.clear()
@@ -195,6 +195,34 @@ class v_Us_dict(defaultdict):
                 self[k] += v
         else:
             defaultdict.__init__(self,list,Bg)
+    def __eq__(self, other):
+        if len(self) != len(other):
+            return False
+        for v,U in self.items():
+            if v not in other:
+                return False
+            Uo = other[v]
+            if not set(Uo)==set(U):
+                return False
+        return True
+    def Code012(self):
+        for v,Us in self.items():
+            vleft = self.width - v - 1
+            for u in Us:
+                b = bin(u)[2:] 
+                w0 = self.width-len(b)
+                c01 = '0'*w0+b
+                c01 = c01.replace('1','2')
+                c01 = c01[:vleft]+'1'+c01[vleft+1:]
+                yield c01
+    def __str__(self):
+        return defaultdict.__str__(self).replace('defaultdict','v_Us_dict')
+    def __len__(self):
+        return sum((len(x) for x in self.values()))
+    def flatten(self):
+        for v,Us in self.items():
+            for u in Us:
+                yield (v,u)
     def __add__(self, other):
         res = v_Us_dict([],self.width)
         if isinstance(other,tuple):
@@ -212,24 +240,15 @@ class v_Us_dict(defaultdict):
     def __sub__(self, other):
         res = v_Us_dict([],self.width)
         for v,U in self.items():
-            res[v] = list(set(U) - set(other[v]))
+            r = list(set(U) - set(other[v]))
+            if r:
+                res[v] = r
         return res
-    def __eq__(self, other):
-        if len(self) != len(other):
-            return False
-        for v,U in self.items():
-            if v not in other:
-                return False
-            Uo = other[v]
-            if not set(Uo)==set(U):
-                return False
-        return True
     def __mul__(self, other):
         """
         This is the o operation in [1]_, that represents the 3rd Armstrong rule.
         It returns combinations for i‡j: (i,u1|u2) or (j,u1|u2),
         """
-        self.log = []
         res = v_Us_dict([],self.width)
         if id(self)==id(other):
             s = iter(self.items())
@@ -244,7 +263,6 @@ class v_Us_dict(defaultdict):
                             vv2 = 2**v2
                             for u1 in us1:
                                 for u2 in us2:
-                                    self.log.append((v1,u1, v2,u2, vv2&u1 and not vv1&u2,vv1&u2 and not vv2&u1))
                                     if vv2&u1 and not vv1&u2:
                                         res[v1].append((u1|u2)&~vv2)
                                     elif vv1&u2 and not vv2&u1:
@@ -266,9 +284,9 @@ class v_Us_dict(defaultdict):
                                 elif vv1&u2 and not vv2&u1:
                                     res[v2].append((u1|u2)&~vv1)
         for v,U in res.items():
-            res[v] = list(set(U))
+            res[v] = list(set(U))#remove duplicates
         return res
-    def generated(self):
+    def __invert__(self):
         """
         U->v generated from L=∪ min L_i via the 3rd Armstrong rule
         Note, that this can become bigger than L.
@@ -276,7 +294,8 @@ class v_Us_dict(defaultdict):
         Y = self
         Yn = Y*Y
         while True:
-            Yg = Yn*(Yn+Y)
+            YnplusY = Yn+Y
+            Yg = Yn*YnplusY
             #YgenNotInL = Yg - L
             #YgenInL = Yg - YgenNotInL
             #Yn1 = Yn + YgenInL
@@ -285,30 +304,26 @@ class v_Us_dict(defaultdict):
                 break
             Yn = Yn1
         return Yn
-    def bar(self):
+    def __pow__(self, other):
         """
-        This is Y ∪ Ygen
-        Note, that this can become bigger than L.
+        'other' is a (v,u) couple
+        generates U->v involving 'other'
+        #other = (0,64)
         """
-        return self + self.generated()
-    def Code012(self):
-        for v,Us in self.items():
-            vleft = self.width - v - 1
-            for u in Us:
-                b = bin(u)[2:] 
-                w0 = self.width-len(b)
-                c01 = '0'*w0+b
-                c01 = c01.replace('1','2')
-                c01 = c01[:vleft]+'1'+c01[vleft+1:]
-                yield c01
-    def __str__(self):
-        return defaultdict.__str__(self).replace('defaultdict','v_Us_dict')
-    def __len__(self):
-        return sum((len(x) for x in self.values()))
-    def flatten(self):
-        for v,Us in self.items():
-            for u in Us:
-                yield (v,u)
+        Y = self
+        Z = v_Us_dict({other[0]:[other[1]]},self.width)
+        Yn = Y*Z
+        while True:
+            YnplusY = Yn+Y
+            Yg = Z*YnplusY
+            #this does not work for test_stem1
+            #YnplusZ = Yn+Z
+            #Yg = YnplusZ*YnplusY
+            Yn1 = Yn + Yg
+            if Yn1 == Yn:
+                break
+            Yn = Yn1
+        return Yn
     def stem(self):
         """
         This needs to be L = contextg.v_Us_B()
@@ -316,16 +331,21 @@ class v_Us_dict(defaultdict):
         L = self
         Y = L - (L*L)
         while True:
-            Ybar = Y.bar()
+            Ybar = Y + ~Y
             take = L - Ybar
             if not len(take):
                 return Y
             else:
-                #take = Y.generated()
-                it = take.flatten()
-                z = next(it)
-                Z=Y+z
-                Y = (Y - Z.generated()) + z #Yn+1
+                ZZ = list(set(take)-set(Y))#use significant which is not in Y
+                if len(ZZ) > 0:
+                    v = ZZ[0]
+                    z=(v,take[v][0])
+                else:
+                    z = next(take.flatten())
+                Yzgen = Y**z
+                Y = (Y - Yzgen) + z #Yn+1
+                #Lost = Ybar - (Y + ~Y)
+                #assert len(Lost) == 0
 
 
 def respects(g,imp):
