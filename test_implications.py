@@ -256,14 +256,14 @@ def test_Ygenerated():
     assert Ygc == []
     assert c.respects(Yg)
 
-def test_stem():
+def test_koenig():
     c = Context('''
                 0101
                 1010
                 1001
                 ''')
     L = c.v_Us_B()
-    Ls = L.stem()
+    Ls = L.koenig()
     Lsc = list(Ls.Code012())
     assert Lsc == ['0201', '2210', '0122', '1020']
     assert c.respects(L)
@@ -284,14 +284,15 @@ def test_mapping():
     lst = list(c(intOrCode012))
     assert lst == ['3','1']
     L = c.v_Us_B()
-    Ls = L.stem()
+    assert c(L) == [[(['3'], ['1'])], [(['4', '3'], ['2'])], [(['2', '1'], ['3'])], [(['2'], ['4'])]]
+    Ls = L.koenig()
     Lsc = list(Ls.Code012())
     assert Lsc == ['0201', '2210', '0122', '1020']
     mapped = [c(i) for i in Lsc]
     assert mapped == [(['3'], ['1']), (['4', '3'], ['2']), (['2', '1'], ['3']), (['2'], ['4'])]
 
  
-def test_stem():
+def test_koenig1():
     #Asets=[set([4,6,7]),set([2,3,6]),set([1,4,7]),set([2,5,6])]
     c = Context('''
             0001011
@@ -300,11 +301,141 @@ def test_stem():
             0100110
             ''',mapping = '1234567')
     L = c.v_Us_B()
-    Ls = L.stem()
+    Ls = L.koenig()
+    assert c.respects(Ls)
     c012 = list(Ls.Code012())
     assert c012 == ['0002001', '2000001', '0020201', '0200010', '2000120', '0001002', '2210000', '0120000', '0100200', '1200002']
     s = lambda x:''.join(x[0])+'->'+''.join(x[1])
     mapped = ','.join([s(list(c(i))) for i in c012])
     assert mapped == "4->7,1->7,35->7,2->6,16->5,7->4,12->3,3->2,5->2,27->1"
+
+
+from itertools import groupby
+rle = lambda s:''.join(['{}^{}_'.format(k, sum(1 for _ in g)) for k, g in groupby(s)])
+def test_koenig_anhang():
+    c = Context('''
+            111111
+            010110
+            001101
+            100100
+            100011
+            001010
+            010001
+            111000
+            ''', mapping='ab cb ca dc db da'.split())
+    B6 = B(c[6],c.width-1)
+    sB6 = istr(B6,2,Bwidth(6))
+    assert len(sB6) == 192
+    rleB6 = rle(sB6)
+    assert rleB6  == '1^94_0^2_1^14_0^2_1^18_0^2_1^6_0^2_1^1_0^2_1^35_0^2_1^6_0^2_1^1_0^2_1^1_'
+    h = reduce(lambda x,y:x&y,(B(g,c.width-1) for g in c))
+    sh = istr(h,2,Bwidth(6))
+    sh1 = list(reversed([192-i for i,d in enumerate(sh) if d=='1']))
+    assert sh1[:5] == [18, 20, 26, 28, 29]
+    uv = c.UV_B()
+    assert uv[-1] == '001202'
+    assert c(uv[-1]) == (['dc', 'da'], ['ca'])
+
+    k = Context('''
+            111111
+            010110
+            001101
+            100100
+            100011
+            001010
+            010001
+            111000
+            ''', mapping='6 5 4 3 2 1'.split())
+    v_Us = k.v_Us_B()
+    assert k(v_Us) == [[(['6', '5', '3'], ['1']), (['6', '2'], ['1']), (['5', '4', '2'], ['1']), (['4', '3'], ['1'])],
+         [(['6', '4', '3'], ['2']), (['6', '1'], ['2']), (['5', '4', '1'], ['2']), (['5', '3'], ['2'])],
+         [(['6', '5', '1'], ['3']), (['6', '4', '2'], ['3']), (['5', '2'], ['3']), (['4', '1'], ['3'])],
+         [(['6', '5'], ['4']), (['6', '3', '2'], ['4']), (['5', '2', '1'], ['4']), (['3', '1'], ['4'])],
+         [(['6', '4'], ['5']), (['6', '3', '1'], ['5']), (['4', '2', '1'], ['5']), (['3', '2'], ['5'])],
+         [(['5', '4'], ['6']), (['5', '3', '1'], ['6']), (['4', '3', '2'], ['6']), (['2', '1'], ['6'])]]
+    L=v_Us
+    Y = L-L*L
+    kY = k(Y)
+    assert kY == [[(['6', '2'], ['1']), (['4', '3'], ['1'])], 
+            [(['6', '1'], ['2']), (['5', '3'], ['2'])],
+            [(['4', '1'], ['3']), (['5', '2'], ['3'])], 
+            [(['6', '5'], ['4']), (['3', '1'], ['4'])], 
+            [(['6', '4'], ['5']), (['3', '2'], ['5'])], 
+            [(['5', '4'], ['6']), (['2', '1'], ['6'])]]
+    assert k(L.koenig()) == kY
+
+
+def test_koenig_89():
+    """
+    This example from Ganter p.89 shows that the algorithm not necessarily produces a minimal basis (stem basis).
+    Here the Duquenne-Guiges-Basis has less implications. This is stated in Theorem 5.18 in
+    `Endliche Hüllensysteme und ihre Implikationenbasen <http://www.emis.de/journals/SLC/wpapers/s49koenig.pdf>`_ by Roman König.
+    """
+    c = Context('''
+        011111110
+        101011111
+        011111100
+        101011000
+        100011111
+        010111110
+        011000110
+        101001111
+        100010011
+        010110010
+        010111000
+        011000000
+        100000111
+        101000000
+        ''',
+        mapping='r i s as an t nt k sk'.split())
+    due="""sk->r,k
+    t,k->nt
+    an,nt->t
+    as->i,an
+    s,k->nt
+    s,an->t
+    i,t->as,an
+    i,an->as
+    i,s,as,an,t->nt
+    r,k->sk
+    r,nt->k,sk
+    r,s,nt,k,sk->t
+    r,i->r,i,s,as,an,t,nt,k,sk""".split('\n')
+    #an=antisymmetrisch
+    #as=assymmetrisch
+    #i=irreflexiv
+    #k=konnex
+    #nt=negativ transitiv
+    #r=reflexiv
+    #sk=streng konnex
+    #s=symmetrisch
+    #t=transitiv
+    basis = c.v_Us_B().koenig()
+    c.respects(basis)
+    assert len(due) == 13
+    assert len(basis) == 18
+    ob = omega(basis)
+    assert ob == 33
+    odgb = omega(due)
+    assert odgb == 52
+    assert ob < odgb
+    assert c(basis) == [[(['r', 'i'], ['sk']),
+                        (['r', 'k'], ['sk']),
+                        (['r', 'nt'], ['sk'])], 
+                        [(['sk'], ['k'])], 
+                        [(['s', 'as'], ['nt']),
+                        (['i', 's', 't'], ['nt']),
+                        (['s', 'k'], ['nt']),
+                        (['t', 'k'], ['nt'])], 
+                        [(['s', 'an'], ['t']),
+                        (['s', 'sk'], ['t']),
+                        (['an', 'nt'], ['t'])], 
+                        [(['as'], ['an']),
+                        (['r', 'i'], ['an']),
+                        (['i', 't'], ['an'])], 
+                        [(['i', 'an'], ['as'])], 
+                        [(['r', 'i'], ['s'])], 
+                        [(['as'], ['i'])], 
+                        [(['sk'], ['r'])]]
 
 

@@ -150,6 +150,29 @@ def UV_B(Bg,gw):
             UV.append(uv)
     return UV
 
+def omega(imps):
+    """
+    Calculates a measure for the size of the implication basis: \sum |U||V|
+    """
+    if isinstance(imps,v_Us_dict):
+        return sum([omega(V) for U,V in imps.items()])#|V|=1
+    if isinstance(imps,list):
+        return sum([omega(x) for x in imps])
+    if isinstance(imps,str):
+        #imps = due[-1]
+        try:
+            U,V = imps.split("->")
+            Us = U.split(",") if "," in U else U.split()
+            Vs = V.split(",") if "," in V else V.split()
+            res = len(Us)*len(Vs)
+            return res
+        except:
+            return 0
+    if isinstance(imps,int):
+        b=bin(imps)[2:]
+        res = len([x for x in b if x=='1'])
+        return res
+
 class v_Us_dict(defaultdict):
     """
     In an implication U→u, u is the significant component.
@@ -176,9 +199,6 @@ class v_Us_dict(defaultdict):
                     uv = B012(p,gw-1)
                     #let's find minima regarding product order
                     #{v:[Umin1,Umin2,...]}
-                    #uv = "2012"
-                    #self.clear()
-                    #self
                     v = uv.find('1')#v=significant
                     u = uv[:v]+'0'+uv[v+1:]
                     u = int(u.replace('2','1'),2)
@@ -316,7 +336,7 @@ class v_Us_dict(defaultdict):
         while True:
             YnplusY = Yn+Y
             Yg = Z*YnplusY
-            #this does not work for test_stem1
+            #this does not work for test_basis1
             #YnplusZ = Yn+Z
             #Yg = YnplusZ*YnplusY
             Yn1 = Yn + Yg
@@ -324,7 +344,7 @@ class v_Us_dict(defaultdict):
                 break
             Yn = Yn1
         return Yn
-    def stem(self):
+    def koenig(self):
         """
         This needs to be L = contextg.v_Us_B()
         """
@@ -346,7 +366,6 @@ class v_Us_dict(defaultdict):
                 Y = (Y - Yzgen) + z #Yn+1
                 #Lost = Ybar - (Y + ~Y)
                 #assert len(Lost) == 0
-
 
 def respects(g,imp):
     """
@@ -453,6 +472,10 @@ class Context(list):
         
         - right, if available, is the conclusion of the implication; used if intOrCode012 is int
         """
+        if isinstance(intOrCode012,v_Us_dict):
+            return [self(x,right=i) for i,x in intOrCode012.items()]
+        if isinstance(intOrCode012,list):
+            return [self(x,right=right) for x in intOrCode012]
         if isinstance(intOrCode012,int):
             res = []
             pp = 1
@@ -460,10 +483,10 @@ class Context(list):
                 if intOrCode012&pp:
                     res.append(self.mapping[-pos-1])
                 pp = pp*2
-            if right:
-                return (reversed(res),[self.mapping[-right-1]])
+            if right != None:
+                return (list(reversed(res)),[self.mapping[-right-1]])
             else:
-                return reversed(res)
+                return list(reversed(res))
         if isinstance(intOrCode012,str):
             left = []
             right = []
@@ -524,7 +547,6 @@ def BB(n):
         r1 = C1((n-1)*2**(n-2),2**(n-1)) - AA1 - BB1
         r2 = BB1 - C1(2**(n-1),2**(n-1)) - BB1;
         return r1 + r2
-
 
 
 #.. _[1]: 
