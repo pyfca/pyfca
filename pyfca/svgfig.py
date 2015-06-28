@@ -1,3 +1,5 @@
+# origin: https://github.com/commonsense/luminoso/blob/master/luminoso/svgfig.py
+#
 # svgfig.py copyright (C) 2008 Jim Pivarski <jpivarski@gmail.com>
 # 
 # This program is free software; you can redistribute it and/or

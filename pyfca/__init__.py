@@ -4,6 +4,126 @@ LatticeNode(index, up, down, attributes, objects, object_index)
 Lattice(objects, attribute_extractor)
 
 LatticeDiagram(lattice, page_w, page_h)
+
+
+This includes a python implementation of the **AddIntent** 
+algorithm from *AddIntent: A New Incremental Algorithm for Constructing Concept Lattices*
+and a lattice drawing algorithm
+I had taken from `Galicia <http://www.iro.umontreal.ca/~galicia/>`_. So it can
+be used to create a concept lattice (fca_lattice) and to draw it
+(lattice_diagram) either using tkinter() or svg().inkscape().
+
+
+TODO: integrate NextConcept and Neighbors
+
+    #A=Attribute, O=Object, C=Concept
+    #Aset is a list of attribute sets (i.e. objects)
+
+    Asets=[set([4,6,7]),set([2,3,6]),set([4,6,7]),set([1,4,7]),set([2,5,6])]
+
+    Os=list(range(1,len(Asets)+1))#=[1, 2, 3, 4, 5]
+
+    As=[elem for elem in reduce(lambda x,y:x|y,Asets)]
+    #=[1, 2, 3, 4, 5, 6, 7]
+
+
+    def A2O(Aset):
+        return set([Os[i] for i in range(len(Asets)) if Aset<=Asets[i]])
+
+    Osets=[A2O(set([s])) for s in As]
+
+    def O2A(Oset):
+        return set([As[i] for i in range(len(Osets)) if Oset<=Osets[i]])
+
+    def AA(Aset):
+        return O2A(A2O(Aset))
+
+    def OO(Oset):
+        return A2O(O2A(Oset))
+
+    def AC(Aset):
+        oo=A2O(Aset)
+        return (oo,O2A(oo))
+
+    def OC(Oset):
+        aa=O2A(Oset)
+        return (A2O(aa),aa)
+
+
+    def NextConcept(Oset):
+        '''NextConcept by Ganter (from lindig-a4.pdf)
+        Flaw: same concept is computed more times
+        
+        >>> [(o,O2A(o)) for o in NextConcept(set([]))]#object and attributes
+        [({5}, {2, 5, 6}), ({4}, {1, 4, 7}), ({2}, {2, 3, 6}), ({2, 5}, {2, 6}), ({1, 3}, {4, 6, 7}), ({1, 3, 4}, {4, 7}), ({1, 2, 3, 5}, {6}), ({1, 2, 3, 4, 5}, set())]
+        
+        '''
+        Oseti=[Os.index(o) for o in Oset]
+        for ii in reversed(range(len(Os))):
+            if Os[ii] not in Oset:
+                Oset1i=[i for i in Oseti if i<ii]
+                #Oset+i
+                Osetp=OO(set([Os[i] for i in (Oset1i+[ii])]))
+                Osetpi=[i for i in [Os.index(o) for o in Osetp] if i<ii]
+                lecticGT=((len(Oset1i)==len(Osetpi)) and 
+                    reduce(lambda x,y:x and y,[a==b for a,b in zip(Oset1i,Osetpi)],True))
+                if lecticGT:
+                    yield Osetp
+                    for n in NextConcept(Osetp):
+                        yield n
+                    break
+
+    def Neighbors(aCOset):
+        ''' Lattice and Neighbors by Lindig (iccs-lindig.pdf)
+        Principle: Only upper neighbors have (Auy)''=(Aug)'' 
+        such that one y of the equivalence class satisfies "if .." below.
+        Flaw: same concept is computed more times
+        
+        >>> Neighbors(set([1,3]))
+        [{1, 3, 4}, {1, 2, 3, 5}]
+        
+        
+        '''
+        oTests=[o for o in Os if o not in aCOset]
+        minos=set(oTests)
+        neighbors=[]
+        for a in oTests:
+            gSet=set([a])
+            neighb=OO(aCOset|gSet)
+            if (minos & (neighb-aCOset-gSet))==set([]):
+                neighbors.append(neighb)
+            else:
+                minos=minos-gSet
+        return neighbors
+
+    def Lattice():
+        '''L is unsorted list
+        Lindex is used to find the index of a concept in L 
+        L[i][0] is the concept's extent, L[i][1] and L[i][2] are indices to the upper and lower neighbors
+        
+        >>> [o for o,u,l in Lattice()[0]]
+        [set(), {2}, {1, 3}, {4}, {5}, {2, 5}, {1, 3, 4}, {1, 2, 3, 5}, {1, 2, 3, 4, 5}]
+        
+        '''
+        c=[set([]),set([]),set([])]
+        L=[]
+        L=[c]
+        Lindex={}
+        Lindex[frozenset(c[0])]=icurrent=0
+        while True:
+            for x in Neighbors(c[0]):
+                ix=Lindex.setdefault(frozenset(x),len(L))
+                if (ix==len(L)):
+                    L.append([x,set([]),set([])])
+                L[ix][2]|=set([icurrent])
+                c[1]|=set([ix])
+            icurrent+=1
+            if icurrent==len(L):
+                break
+            c=L[icurrent]
+        return (L,Lindex)
+
+
 """
 
 #TODO
