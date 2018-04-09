@@ -304,7 +304,7 @@ class Lattice:
         self.nodes[gen_index].up |= set([NewConcept])
         return NewConcept
 
-from svgfig import SVG
+from .svgfig import SVG
 from tkinter import *
 
 class TkinterCanvas(Frame):

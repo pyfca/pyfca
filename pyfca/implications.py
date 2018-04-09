@@ -473,9 +473,9 @@ class Context(list):
         - right, if available, is the conclusion of the implication; used if intOrCode012 is int
         """
         if isinstance(intOrCode012,v_Us_dict):
-            return [self(x,right=i) for i,x in intOrCode012.items()]
+            return frozenset(self(x,right=i) for i,x in intOrCode012.items())
         if isinstance(intOrCode012,list):
-            return [self(x,right=right) for x in intOrCode012]
+            return frozenset(self(x,right=right) for x in intOrCode012)
         if isinstance(intOrCode012,int):
             res = []
             pp = 1
@@ -484,9 +484,9 @@ class Context(list):
                     res.append(self.mapping[-pos-1])
                 pp = pp*2
             if right != None:
-                return (list(reversed(res)),[self.mapping[-right-1]])
+                return (frozenset(res),frozenset([self.mapping[-right-1]]))
             else:
-                return list(reversed(res))
+                return frozenset(res)
         if isinstance(intOrCode012,str):
             left = []
             right = []
@@ -497,11 +497,11 @@ class Context(list):
                     right.append(self.mapping[pos])
             if left:
                 if right:
-                    return (left,right)
+                    return (frozenset(left),frozenset(right))
                 else:
-                    return left
+                    return frozenset(left)
             else:
-                return right
+                return frozenset(right)
 
 C = Context
     
