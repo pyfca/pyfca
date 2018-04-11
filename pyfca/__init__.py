@@ -137,7 +137,8 @@ TODO: integrate NextConcept and Neighbors
 # pylint: disable=I0011,R0201
 
 from functools import reduce
-
+from .svgfig import SVG
+from tkinter import *
 
 class LatticeNode:
 
@@ -173,7 +174,7 @@ class Lattice:
 
     """
 
-    def __init__(self, objects, attribute_extractor):
+    def __init__(self, objects, attribute_extractor=lambda x:x):
         self.attribute_extractor = attribute_extractor
         self.objects = objects
         self.ASets = [set(self.attribute_extractor(oo)) for oo in self.objects]
@@ -184,7 +185,7 @@ class Lattice:
             self.Asequence), None, -1), LatticeNode(1, set(), set([0]), set(), None, -1)]
         self.itop = 1  # if itop is not added here, there won't be any top
         self.ibottom = 0
-        sai = self._sorted_aset_index(self.Asequence)
+        sai = self._sorted_aset_index()
         for i in sai:
             self.AddIntent(self.ASets[i], i, self.ibottom)
         self.path = []
@@ -233,15 +234,15 @@ class Lattice:
             self.traverse_up(visit, nextnode)
             del self.path[-1]
 
-    def _sorted_aset_index(self, Asequence):
+    def _sorted_aset_index(self):
         a_i = {}
-        for a in Asequence:
+        for a in self.Asequence:
             a_i[a] = [i for i in range(len(self.ASets)) if a in self.ASets[i]]
-        Asequence.sort(key=lambda x: len(a_i[x]))
-        Asequence.reverse()
+        self.Asequence.sort(key=lambda x: len(a_i[x]))
+        self.Asequence.reverse()
         done = set()
         index = []
-        for a in Asequence:
+        for a in self.Asequence:
             new = set(a_i[a]) - done
             done |= new
             index += list(new)
@@ -304,20 +305,17 @@ class Lattice:
         self.nodes[gen_index].up |= set([NewConcept])
         return NewConcept
 
-from .svgfig import SVG
-from tkinter import *
-
 class TkinterCanvas(Frame):
 
     def __init__(self, lattice_diagram):
         Frame.__init__(self, master=None)
+        self.lattice_diagram = lattice_diagram
         Pack.config(self, fill=BOTH, expand=YES)
-        self.makeCanvas()
-        self.drawit()
         self.master.title("Lattice")
         self.master.iconname("Lattice")
         self.scale = 1.0
-        self.lattice_diagram = lattice_diagram
+        self.makeCanvas()
+        self.drawit()
 
     def Btn1Up(self, event):
         if self.scale < 1.0:
@@ -373,7 +371,7 @@ class LatticeDiagram:
     .. {LatticeDiagram,inkscape,tkinter}
     >>> src=[ [1,2], [1,3], [1,4] ]
     >>> lattice = Lattice(src,lambda x:set(x))
-    >>> ld = LatticeDiagram(Lattice,400,400)
+    >>> ld = LatticeDiagram(lattice,400,400)
     >>> #display using tkinter
     >>> ld.tkinter()
     >>> mainloop()
@@ -457,8 +455,8 @@ class LatticeDiagram:
                 self.setPos(n, pX, n.y, self.dw, self.dh)
                 pX += 2 * self.dw
             self.minCrossing(level, False)
-        for level in self.levels:
-            self.minCrossing(level, True)
+        #for level in self.levels:
+        #    self.minCrossing(level, True)
 
     def minCrossing(self, level, forChildren):
         test = False
