@@ -11,7 +11,7 @@ algorithm from *AddIntent: A New Incremental Algorithm for Constructing Concept 
 and a lattice drawing algorithm
 I had taken from `Galicia <http://www.iro.umontreal.ca/~galicia/>`_. So it can
 be used to create a concept lattice (fca_lattice) and to draw it
-(lattice_diagram) either using tkinter() or svg().inkscape().
+(lattice_diagram) either using tkinter() or svg()
 
 
 TODO: integrate NextConcept and Neighbors
@@ -137,7 +137,7 @@ TODO: integrate NextConcept and Neighbors
 # pylint: disable=I0011,R0201
 
 from functools import reduce
-from .svgfig import SVG
+import svgwrite
 from tkinter import *
 
 class LatticeNode:
@@ -368,15 +368,13 @@ class TkinterCanvas(Frame):
 class LatticeDiagram:
 
     ''' format and draw a Lattice
-    .. {LatticeDiagram,inkscape,tkinter}
     >>> src=[ [1,2], [1,3], [1,4] ]
     >>> lattice = Lattice(src,lambda x:set(x))
     >>> ld = LatticeDiagram(lattice,400,400)
     >>> #display using tkinter
     >>> ld.tkinter()
     >>> mainloop()
-    >>> #display using inkscape
-    >>> ld.svg().inkscape()
+    >>> ld.svg().saveas('tmp.svg')
     '''
 
     def __init__(self, lattice, page_w, page_h):
@@ -507,23 +505,30 @@ class LatticeDiagram:
                     nbCrossing += 1
         return nbCrossing
 
-    def svg(self):
-        svg = SVG("g", stroke_width="0.1pt")
-        for an in self.lattice:
-            gn = [self.lattice[i] for i in an.down]
+    def svg(self,filename=None,target=""):
+        dwg = svgwrite.Drawing(filename, width="210mm", height="297mm")
+        xm,ym = 0,0
+        xn,yn = sys.maxsize, sys.maxsize
+        for n in self.lattice:
+            gn = [self.lattice[i] for i in n.down]
             for ag in gn:
-                svg.append(
-                    SVG("line", x1=an.x, y1=an.y + an.h / 2, x2=ag.x, y2=ag.y + an.h / 2))
-        for an in self.lattice:
-            txt = ','.join([str(l) for l in an.intent if l])
-            node = SVG(
-                "g", font_size=an.h / 2, text_anchor="middle", stroke_width="0.1pt")
-            node.append(
-                SVG("rect", x=an.x - an.w / 2, y=an.y, width=an.w, height=an.h, fill="yellow"))
-            node.append(
-                SVG("text", txt, x=an.x, y=an.y + 3 * an.h / 4, fill="black"))
-            svg.append(node)
-        return svg
+                dwg.add(dwg.line((n.x,n.y+n.h/2), (ag.x,ag.y+n.h/2), stroke='black'))
+        for n in self.lattice:
+            if target:
+                link = dwg.add(dwg.a(target+"#t"+str(n.index),target='_top'))
+                shape = link.add(dwg.circle((n.x,n.y+n.h/2),2*min(n.w,n.h)/3,fill='red',stroke='black'))
+            else:
+                shape = dwg.add(dwg.circle((n.x,n.y+n.h/2),2*min(n.w,n.h)/3,fill='red',stroke='black'))
+            if n.x+n.w/2>xm:
+                xm = n.x+n.w/2
+            if n.y+n.h>ym:
+                ym = n.y+n.h
+            if n.x-n.w/2<xn:
+                xn = n.x-n.w/2
+            if n.y<yn:
+                yn = n.y
+        dwg.viewbox(int(xn-self.border),int(yn-self.border),int(xm+self.border),int(ym+self.border))
+        return dwg
 
     def tkinter(self):
         return TkinterCanvas(self)

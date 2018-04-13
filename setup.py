@@ -35,7 +35,7 @@ setup(name = 'pyfca',
         'Intended Audience :: Information Technology'
         ],
 
-    install_requires = [],
+    install_requires = ['svgwrite'],
     extras_require = {'develop': ['pytest-coverage']},
     long_description = long_description,
     packages=['pyfca'],
