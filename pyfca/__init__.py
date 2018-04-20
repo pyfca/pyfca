@@ -453,20 +453,20 @@ class LatticeDiagram:
                 self.setPos(n, pX, n.y, self.dw, self.dh)
                 pX += 2 * self.dw
             self.minCrossing(level, False)
-        #for level in self.levels:
-        #    self.minCrossing(level, True)
+        for level in self.levels:
+            self.minCrossing(level, True)
 
     def minCrossing(self, level, forChildren):
-        test = False
+        #test = False
         nbTotal = 0
         nbCrossing1 = 0
         nbCrossing2 = 0
         i = 0
         j = 0
         while i < len(level):
-            if test:
-                i = 0
-            test = False
+            #if test:
+            #    i = 0
+            #test = False
             node1 = level[i]
             j = i + 1
             while j < len(level):
@@ -479,7 +479,7 @@ class LatticeDiagram:
                 if nbCrossing1 > nbCrossing2:
                     self.swap(level, i, j)
                     nbTotal += nbCrossing2
-                    test = True
+                    #test = True
                 else:
                     nbTotal += nbCrossing1
                 j += 1
