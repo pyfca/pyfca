@@ -505,20 +505,35 @@ class LatticeDiagram:
                     nbCrossing += 1
         return nbCrossing
 
-    def svg(self,filename=None,target=""):
+    def svg(self,filename=None,target="",colors=None):
         dwg = svgwrite.Drawing(filename, width="210mm", height="297mm")
         xm,ym = 0,0
         xn,yn = sys.maxsize, sys.maxsize
+        def symbol(n,parent,c,r):#color using first letter of intent matching color key
+            if colors is None:
+                parent.add(dwg.circle(c,r,fill='white',stroke='black'))
+            else:
+                od = []
+                its = {x[0] for x in n.intent}
+                for k,v in colors.items():
+                    if k[0] in its:
+                        od.append(v)
+                if its-set([k[0] for k in colors]):
+                    od.append("white")
+                odl = len(od)
+                for i in range(odl-1,-1,-1):
+                    rr = int(r*(i+1)/odl)
+                    parent.add(dwg.circle(c,rr,fill=od[i],stroke='black'))
         for n in self.lattice:
             gn = [self.lattice[i] for i in n.down]
             for ag in gn:
                 dwg.add(dwg.line((n.x,n.y+n.h/2), (ag.x,ag.y+n.h/2), stroke='black'))
         for n in self.lattice:
             if target:
-                link = dwg.add(dwg.a(target+"#t"+str(n.index),target='_top'))
-                shape = link.add(dwg.circle((n.x,n.y+n.h/2),2*min(n.w,n.h)/3,fill='red',stroke='black'))
+                link = dwg.add(dwg.a(target+str(n.index),target='_top'))
+                shape = symbol(n,link,(n.x,n.y+n.h/2),2*min(n.w,n.h)/3)
             else:
-                shape = dwg.add(dwg.circle((n.x,n.y+n.h/2),2*min(n.w,n.h)/3,fill='red',stroke='black'))
+                shape = symbol(n,dwg,(n.x,n.y+n.h/2),2*min(n.w,n.h)/3)
             if n.x+n.w/2>xm:
                 xm = n.x+n.w/2
             if n.y+n.h>ym:
