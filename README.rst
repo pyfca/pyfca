@@ -24,8 +24,8 @@ lattice drawing:
 
 - create lattice diagram and output in 
 
-    - svg
-    - tkinter
+  - svg
+  - tkinter
 
 Plan
 ----
