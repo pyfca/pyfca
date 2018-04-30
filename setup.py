@@ -16,7 +16,7 @@ def read(fname):
         return f.read().split('\n"""')[1]
 
 long_description = '\n'.join([
-    open('readme.rst').read(),
+    open('README.rst').read(),
     open('pyfca/__init__.py').read(),
     open('pyfca/implications.py').read()
 ])
