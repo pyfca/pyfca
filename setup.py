@@ -9,7 +9,7 @@ from setuptools import setup
 import platform
 import os, os.path
 
-__version__ = '0.3'
+__version__ = '0.3.1'
 
 def read(fname):
     with open(os.path.join(os.path.dirname(__file__), fname),encoding='utf-8') as f:
@@ -17,8 +17,8 @@ def read(fname):
 
 long_description = '\n'.join([
     open('README.rst').read(),
-    open('pyfca/__init__.py').read(),
-    open('pyfca/implications.py').read()
+    read('pyfca/__init__.py'),
+    read('pyfca/implications.py')
 ])
 
 setup(name = 'pyfca',
