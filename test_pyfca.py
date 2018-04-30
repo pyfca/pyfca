@@ -20,6 +20,6 @@ def test_draw_lattice(tmpdir):
     #  tmpdir=local('.')
     tmp=tmpdir.join('fca.svg')
     #ld.svg().inkscape(fileName = tmp.strpath)
-    ld.svg().save(fileName = tmp.strpath)
+    ld.svg().saveas(tmp.strpath)
     assert tmp.exists()
     tmp.remove()

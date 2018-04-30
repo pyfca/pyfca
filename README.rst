@@ -1,15 +1,16 @@
 pyfca
 =====
 
-Python formal concept analysis library.
+https://github.com/pyfca/pyfca
 
-started: 2015/05/02
-purpose: collect algoritms for FCA
+Python Formal Concept Analysis (`FCA`_).
 
-not yet on pip
+The purpose is to collect algoritms for FCA.
 
-so far
-------
+Algorithms
+----------
+
+So far:
 
 lattice construction:
 
@@ -21,26 +22,30 @@ implications basis:
 
 lattice drawing:
 
-- output svg
-- output tkinter
+- create lattice diagram and output in 
+
+    - svg
+    - tkinter
+
+Plan
+----
+
+- Create a basic lattice data structure:
+
+- Merge existing sources available online.
+
+  Lattice construction:
+
+  - FCbO
+  - InClose2
+  - ...
+
+  Implications basis:
+
+  - Closure
+  - LinClosure
+  - Wild's Closure
+  - ...
 
 
-planned
--------
-
-Merge existing sources available online.
-
-Lattice construction:
-
-- FCbO
-- InClose2
-- ...
-
-Implications basis:
-
-- Closure
-- LinClosure
-- Wild's Closure
-- ...
-
-
+.. _`FCA`: https://en.wikipedia.org/wiki/Formal_concept_analysis

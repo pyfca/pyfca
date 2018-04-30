@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# encoding: utf-8 
+
+"""
+
+Implications
+------------
+
+This uses the python int as a bit field to store the FCA context.
+
+See this `blog`_ for more.
+
+
+.. _`blog`: http://rolandpuntaier.blogspot.com/2015/07/implications.html
+
+"""
+
 from math import trunc, log2
 from functools import reduce
 from itertools import tee

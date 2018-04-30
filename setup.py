@@ -9,14 +9,16 @@ from setuptools import setup
 import platform
 import os, os.path
 
-__version__ = '1.0'
+__version__ = '0.3'
 
 def read(fname):
     with open(os.path.join(os.path.dirname(__file__), fname),encoding='utf-8') as f:
         return f.read().split('\n"""')[1]
 
-long_description = '\n'.join(["pyfca\n=====\n\n"
-,open('readme.rst').read()
+long_description = '\n'.join([
+    open('readme.rst').read(),
+    open('pyfca/__init__.py').read(),
+    open('pyfca/implications.py').read()
 ])
 
 setup(name = 'pyfca',

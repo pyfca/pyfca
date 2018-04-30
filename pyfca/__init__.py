@@ -1,19 +1,37 @@
+#!/usr/bin/env python3
+# encoding: utf-8 
+
 """
-LatticeNode(index, up, down, attributes, objects, object_index)
 
-Lattice(objects, attribute_extractor)
+Usage
+-----
 
-LatticeDiagram(lattice, page_w, page_h)
+It can be used to create a concept lattice and to draw it either using tkinter() or svg().
+
+.. code::
+
+    import pyfca
+    fca = pyfca.Lattice([{1,2},{2},{1,3}])
+    diagram = pyfca.LatticeDiagram(fca,4*297,4*210)
+    diagram.svg().saveas('tmp.svg')
+    import cairosvg
+    cairosvg.svg2png(url="file:///<path to tmp.svg>", write_to='tmp.png')
 
 
-This includes a python implementation of the **AddIntent** 
-algorithm from *AddIntent: A New Incremental Algorithm for Constructing Concept Lattices*
-and a lattice drawing algorithm
-I had taken from `Galicia <http://www.iro.umontreal.ca/~galicia/>`_. So it can
-be used to create a concept lattice (fca_lattice) and to draw it
-(lattice_diagram) either using tkinter() or svg()
+
+The ``AddIntent`` algorithm is from the paper:
+
+    AddIntent: A New Incremental Algorithm for Constructing Concept Lattices
 
 
+The lattice drawing algorithm is from:
+
+    `Galicia <http://www.iro.umontreal.ca/~galicia/>`_
+    
+    
+"""
+
+'''
 TODO: integrate NextConcept and Neighbors
 
     #A=Attribute, O=Object, C=Concept
@@ -51,13 +69,13 @@ TODO: integrate NextConcept and Neighbors
 
 
     def NextConcept(Oset):
-        '''NextConcept by Ganter (from lindig-a4.pdf)
+        """NextConcept by Ganter (from lindig-a4.pdf)
         Flaw: same concept is computed more times
         
         >>> [(o,O2A(o)) for o in NextConcept(set([]))]#object and attributes
         [({5}, {2, 5, 6}), ({4}, {1, 4, 7}), ({2}, {2, 3, 6}), ({2, 5}, {2, 6}), ({1, 3}, {4, 6, 7}), ({1, 3, 4}, {4, 7}), ({1, 2, 3, 5}, {6}), ({1, 2, 3, 4, 5}, set())]
         
-        '''
+        """
         Oseti=[Os.index(o) for o in Oset]
         for ii in reversed(range(len(Os))):
             if Os[ii] not in Oset:
@@ -74,7 +92,7 @@ TODO: integrate NextConcept and Neighbors
                     break
 
     def Neighbors(aCOset):
-        ''' Lattice and Neighbors by Lindig (iccs-lindig.pdf)
+        """ Lattice and Neighbors by Lindig (iccs-lindig.pdf)
         Principle: Only upper neighbors have (Auy)''=(Aug)'' 
         such that one y of the equivalence class satisfies "if .." below.
         Flaw: same concept is computed more times
@@ -83,7 +101,7 @@ TODO: integrate NextConcept and Neighbors
         [{1, 3, 4}, {1, 2, 3, 5}]
         
         
-        '''
+        """
         oTests=[o for o in Os if o not in aCOset]
         minos=set(oTests)
         neighbors=[]
@@ -97,14 +115,14 @@ TODO: integrate NextConcept and Neighbors
         return neighbors
 
     def Lattice():
-        '''L is unsorted list
+        """L is unsorted list
         Lindex is used to find the index of a concept in L 
         L[i][0] is the concept's extent, L[i][1] and L[i][2] are indices to the upper and lower neighbors
         
         >>> [o for o,u,l in Lattice()[0]]
         [set(), {2}, {1, 3}, {4}, {5}, {2, 5}, {1, 3, 4}, {1, 2, 3, 5}, {1, 2, 3, 4, 5}]
         
-        '''
+        """
         c=[set([]),set([]),set([])]
         L=[]
         L=[c]
@@ -124,7 +142,7 @@ TODO: integrate NextConcept and Neighbors
         return (L,Lindex)
 
 
-"""
+'''
 
 #TODO
 # pylint: disable=I0011,C0103
