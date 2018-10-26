@@ -41,6 +41,7 @@ TODO: integrate NextConcept and Neighbors
 
     Os=list(range(1,len(Asets)+1))#=[1, 2, 3, 4, 5]
 
+    from functools import reduce
     As=[elem for elem in reduce(lambda x,y:x|y,Asets)]
     #=[1, 2, 3, 4, 5, 6, 7]
 
@@ -144,6 +145,8 @@ TODO: integrate NextConcept and Neighbors
 
 '''
 
+#TODO: testing
+
 #TODO
 # pylint: disable=I0011,C0103
 # pylint: disable=I0011,C0111
@@ -154,9 +157,9 @@ TODO: integrate NextConcept and Neighbors
 # pylint: disable=I0011,W0401
 # pylint: disable=I0011,R0201
 
-from functools import reduce
 import svgwrite
 from tkinter import *
+from collections import defaultdict
 
 class LatticeNode:
 
@@ -196,19 +199,27 @@ class Lattice:
         self.attribute_extractor = attribute_extractor
         self.objects = objects
         self.ASets = [set(self.attribute_extractor(oo)) for oo in self.objects]
-        self.Asequence = [
-            elem for elem in reduce(lambda x, y: x | y, self.ASets)]
+        a_iAsets = defaultdict(set)
+        self.Aall = set()
+        for i,aset in enumerate(self.ASets):
+            for a in aset:
+                a_iAsets[a].add(i)
+            self.Aall |= aset
         # initial nodes are bottom and top
         self.nodes = [LatticeNode(0, set([1]), set(), set(
-            self.Asequence), None, -1), LatticeNode(1, set(), set([0]), set(), None, -1)]
+            self.Aall), None, -1), LatticeNode(1, set(), set([0]), set(), None, -1)]
         self.itop = 1  # if itop is not added here, there won't be any top
         self.ibottom = 0
-        sai = self._sorted_aset_index()
-        for i in sai:
-            self.AddIntent(self.ASets[i], i, self.ibottom)
-        self.path = []
+        self.Aall = list(sorted(self.Aall,key=lambda a: len(a_iAsets[a])))
+        self.Aall.reverse()
+        done = set()
+        index = []
+        for a in self.Aall:
+            new = set(a_iAsets[a]) - done
+            done |= new
+            for i in new:
+                self.AddIntent(self.ASets[i], i, self.ibottom)
         # calc weights
-
         def inc_weight(n):
             n.weight += 1
         self.traverse_up(lambda p: inc_weight(p[-1]))
@@ -230,51 +241,48 @@ class Lattice:
 
     def traverse_down(self, visit, node=None):
         if node == None:
+            self.path = []
+            self.sofar = set()
             node = self.nodes[self.itop]
         for t in self.sort_by_weight(node.down):
             if t == 0:
                 continue
-            nextnode = self.nodes[t]
-            self.path.append(nextnode)
-            visit(self.path)
-            self.traverse_down(visit, nextnode)
-            del self.path[-1]
+            if t not in self.sofar:
+                self.sofar.add(t)
+                nextnode = self.nodes[t]
+                self.path.append(nextnode)
+                try:
+                    visit(self.path)
+                finally:
+                    self.path.pop()
+                self.traverse_down(visit, nextnode)
 
     def traverse_up(self, visit, node=None):
         if node == None:
+            self.path = []
+            self.sofar = set()
             node = self.nodes[self.ibottom]
         for t in node.up:
             if t == 0:
                 continue
-            nextnode = self.nodes[t]
-            self.path.append(nextnode)
-            visit(self.path)
-            self.traverse_up(visit, nextnode)
-            del self.path[-1]
-
-    def _sorted_aset_index(self):
-        a_i = {}
-        for a in self.Asequence:
-            a_i[a] = [i for i in range(len(self.ASets)) if a in self.ASets[i]]
-        self.Asequence.sort(key=lambda x: len(a_i[x]))
-        self.Asequence.reverse()
-        done = set()
-        index = []
-        for a in self.Asequence:
-            new = set(a_i[a]) - done
-            done |= new
-            index += list(new)
-        return index
+            if t not in self.sofar:
+                self.sofar.add(t)
+                nextnode = self.nodes[t]
+                self.path.append(nextnode)
+                try:
+                    visit(self.path)
+                finally:
+                    self.path.pop()
+                self.traverse_up(visit, nextnode)
 
     def _get_maximal_concept(self, intent, gen_index):
-        parentIsMaximal = True
-        while parentIsMaximal:
-            parentIsMaximal = False
-            Parents = self.nodes[gen_index].up
-            for Parent in Parents:
-                if intent <= self.nodes[Parent].intent:
-                    gen_index = Parent
-                    parentIsMaximal = True
+        ismaximal = True
+        while ismaximal:
+            ismaximal = False
+            for up in self.nodes[gen_index].up:
+                if intent <= self.nodes[up].intent:
+                    gen_index = up
+                    ismaximal = True
                     break
         return gen_index
 
@@ -487,6 +495,7 @@ class LatticeDiagram:
             #test = False
             node1 = level[i]
             j = i + 1
+            #oldtotal = nbTotal
             while j < len(level):
                 node2 = level[j]
                 nbCrossing1 = self.nbCrossing(node1.up, node2.up)
@@ -498,9 +507,13 @@ class LatticeDiagram:
                     self.swap(level, i, j)
                     nbTotal += nbCrossing2
                     #test = True
+                #elif nbCrossing1 == nbCrossing2:
+                #    continue
                 else:
                     nbTotal += nbCrossing1
                 j += 1
+            #if oldtotal >= nbTotal:
+            #    continue
             i += 1
         return nbTotal
 
