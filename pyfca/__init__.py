@@ -145,8 +145,6 @@ TODO: integrate NextConcept and Neighbors
 
 '''
 
-#TODO: testing
-
 #TODO
 # pylint: disable=I0011,C0103
 # pylint: disable=I0011,C0111
@@ -495,7 +493,6 @@ class LatticeDiagram:
             #test = False
             node1 = level[i]
             j = i + 1
-            #oldtotal = nbTotal
             while j < len(level):
                 node2 = level[j]
                 nbCrossing1 = self.nbCrossing(node1.up, node2.up)
@@ -507,13 +504,9 @@ class LatticeDiagram:
                     self.swap(level, i, j)
                     nbTotal += nbCrossing2
                     #test = True
-                #elif nbCrossing1 == nbCrossing2:
-                #    continue
                 else:
                     nbTotal += nbCrossing1
                 j += 1
-            #if oldtotal >= nbTotal:
-            #    continue
             i += 1
         return nbTotal
 
