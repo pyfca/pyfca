@@ -155,6 +155,7 @@ TODO: integrate NextConcept and Neighbors
 # pylint: disable=I0011,W0401
 # pylint: disable=I0011,R0201
 
+import sys
 import svgwrite
 from tkinter import *
 from collections import defaultdict
